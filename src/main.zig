@@ -1,0 +1,50 @@
+const std = @import("std");
+const utils = @import("utils.zig");
+const modules = @import("modules/mod.zig");
+const SubCommands = enum {
+    Reminder,
+    DismissReminder,
+    Notification,
+    DismissNotification,
+};
+
+pub fn main() !void {
+    const page_allocator = std.heap.page_allocator;
+    var Aallocator = std.heap.ArenaAllocator.init(page_allocator);
+    defer Aallocator.deinit();
+    const allocator = Aallocator.allocator();
+    var args = try std.process.argsWithAllocator(allocator);
+    defer args.deinit();
+
+    std.debug.print("Hello World\n", .{});
+    _ = args.next();
+
+    var subcommand_map = std.StringHashMap(SubCommands).init(allocator);
+    try subcommand_map.put("remind", SubCommands.Reminder);
+    try subcommand_map.put("-remind", SubCommands.DismissReminder);
+    try subcommand_map.put("notify", SubCommands.Notification);
+    try subcommand_map.put("-notify", SubCommands.DismissNotification);
+
+    if (args.next()) |subcommand| {
+        const subcommand_lower = try utils.to_lowercase(subcommand, allocator);
+        defer allocator.free(subcommand_lower);
+        if (subcommand_map.get(subcommand_lower)) |SC| {
+            switch (SC) {
+                SubCommands.Reminder => try modules.reminders.set(&args, allocator),
+                SubCommands.DismissReminder => {
+                    std.debug.print("Dismissing Remind", .{});
+                },
+                SubCommands.Notification => {
+                    std.debug.print("Notify is not implemented", .{});
+                },
+                SubCommands.DismissNotification => {
+                    std.debug.print("Dismissing Nofify is not implemented", .{});
+                },
+            }
+        } else {
+            std.debug.print("{s} {s} is not a valid subcommand", .{ subcommand, subcommand_lower });
+        }
+    } else {
+        std.debug.print("No Subcommand", .{});
+    }
+}
