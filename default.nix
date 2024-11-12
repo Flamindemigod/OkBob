@@ -1,15 +1,15 @@
-# default.nix
-{ pkgs ? import <nixpkgs> {} }:
+{ stdenv, zig }:
+stdenv.mkDerivation rec {
+  name = "OkBob";
+  src = ./.; # This refers to the current directory (your project source)
 
-pkgs.mkShell {
-  buildInputs = with pkgs;[
-	zig
-	valgrind
-];
+  buildInputs = [ zig sqlite ];
 
-  # Optionally, you can set environment variables
-  shellHook = ''
-	zig zen
-'';
+  buildPhase = ''
+    export XDG_CACHE_HOME=$(mktemp -d)
+    mkdir $out
+    zig build install --prefix $out -Doptimize=ReleaseSafe -v
+    rm -rf $XDG_CACHE_HOME
+  '';
 }
 
