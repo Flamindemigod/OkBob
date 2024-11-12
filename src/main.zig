@@ -15,8 +15,8 @@ pub fn main() !void {
     const allocator = Aallocator.allocator();
     var args = try std.process.argsWithAllocator(allocator);
     defer args.deinit();
-
-    std.debug.print("Hello World\n", .{});
+    try modules.db.init(allocator);
+    defer modules.db.close();
     _ = args.next();
 
     var subcommand_map = std.StringHashMap(SubCommands).init(allocator);
