@@ -7,8 +7,8 @@ const REMINDER = struct {
     name: []const u8,
     timeCreated: i64,
 
-    fn print(self: *const REMINDER) void {
-        std.log.debug("Reminder {d}:\n\t{s}\n\t {d}\n", .{ self.id, self.name, self.timeCreated });
+    fn print(self: *const REMINDER, display_idx: usize) void {
+        std.log.debug("Reminder {d}:\n\t{s}\n\t {d}\n", .{ display_idx, self.name, self.timeCreated });
     }
 };
 
@@ -23,15 +23,16 @@ fn insert(text: []const u8) !void {
     });
 }
 
-fn fetch(allocator: std.mem.Allocator) !void {
+fn fetch(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(REMINDER) {
+    var note_list = std.ArrayListUnmanaged(REMINDER){};
     var stmt = try db.db.prepare("SELECT id, name, timeCreated FROM reminders where isActive = 1");
     defer stmt.deinit();
 
     var iter = try stmt.iterator(REMINDER, .{});
     while (try iter.nextAlloc(allocator, .{})) |vals| {
-        REMINDER.print(&vals);
-        //std.log.debug("{}\n", .{vals});
+        try note_list.append(allocator, @as(REMINDER, vals));
     }
+    return note_list;
 }
 
 fn note_insert_from_builder(allocator: std.mem.Allocator, comptime T: type, builder: *std.ArrayList(T), note: *std.ArrayList(T)) !void {
@@ -80,5 +81,8 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
 }
 
 pub fn get(allocator: std.mem.Allocator) !void {
-    try fetch(allocator);
+    const note_list = try fetch(allocator);
+    for (note_list.items, 0..) |note, display_idx| {
+        note.print(display_idx);
+    }
 }
