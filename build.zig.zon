@@ -1,0 +1,11 @@
+.{
+    .name = "OkBob",
+    .version = "0.0.1",
+    .dependencies = .{
+        .sqlite = .{
+            .url = "https://github.com/vrischmann/zig-sqlite/archive/7f4be7d30b126affb66b390c7825addb1c3506bd.zip",
+            .hash = "1220940ae067451e7e6824e9b92baceac93b0bd6fa9ffd315179cc9a7ce5430a46ac",
+        },
+    },
+    .paths = .{"."},
+}

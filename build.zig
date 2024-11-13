@@ -4,17 +4,10 @@ pub fn build(b: *std.Build) !void {
     const opt = b.standardOptimizeOption(.{});
     const target = b.standardTargetOptions(.{});
 
-    const sqlite = b.addModule("sqlite", .{
-        .root_source_file = b.path("external/zig-sqlite/sqlite.zig"),
+    const sqlite = b.dependency("sqlite", .{
+        .target = target,
+        .optimize = opt,
     });
-
-    sqlite.addCSourceFiles(.{
-        .files = &[_][]const u8{
-            "external/zig-sqlite/c/workaround.c",
-        },
-        .flags = &[_][]const u8{"-std=c99"},
-    });
-    sqlite.addIncludePath(b.path("external/zig-sqlite/c"));
 
     const exe = b.addExecutable(.{
         .name = "OkBob",
@@ -24,7 +17,7 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibC();
     exe.linkSystemLibrary("sqlite3");
-    exe.root_module.addImport("sqlite", sqlite);
+    exe.root_module.addImport("sqlite", sqlite.module("sqlite"));
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
