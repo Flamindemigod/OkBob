@@ -2,6 +2,17 @@ const std = @import("std");
 const utils = @import("../utils.zig");
 const db = @import("db.zig");
 
+fn insert(text: []const u8) !void {
+    var stmt = try db.db.prepare("INSERT INTO reminders(isActive, name, timeCreated) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64})");
+    defer stmt.deinit();
+
+    try stmt.exec(.{}, .{
+        .isActive = @as(bool, true),
+        .name = text,
+        .timeCreated = std.time.timestamp(),
+    });
+}
+
 //NOTE: Setting Reminders should be of format
 // `OkBob remind Buy Milk`
 // Where the reminder text is "Buy Milk"
@@ -37,7 +48,7 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     const joined_string = try utils.string_join(note_builder, " ", allocator);
     try notes.append(joined_string);
     for (notes.items) |note| {
-        try db.insertReminder(note);
+        try insert(note);
     }
     std.debug.print("In Reminders {s}\n", .{notes.items});
 }

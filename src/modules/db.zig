@@ -1,7 +1,7 @@
 const std = @import("std");
 const sqlite = @import("sqlite");
 
-var db: sqlite.Db = undefined;
+pub var db: sqlite.Db = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     var db_path: [:0]const u8 = "./OkBob.db";
@@ -43,17 +43,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
 fn setup() !void {
     try db.exec("CREATE TABLE reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, isActive BOOLEAN, name TEXT, timeCreated INTEGER)", .{}, .{});
     try db.exec("CREATE TABLE notifications (id INT, isActive BOOLEAN, name TEXT, timeCreated INTEGER, frequency INT)", .{}, .{});
-}
-
-pub fn insertReminder(text: []const u8) !void {
-    var stmt = try db.prepare("INSERT INTO reminders(isActive, name, timeCreated) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64})");
-    defer stmt.deinit();
-
-    try stmt.exec(.{}, .{
-        .isActive = @as(bool, true),
-        .name = text,
-        .timeCreated = std.time.timestamp(),
-    });
 }
 
 pub fn close() void {
