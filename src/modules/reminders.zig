@@ -13,6 +13,14 @@ fn insert(text: []const u8) !void {
     });
 }
 
+fn note_insert_from_builder(allocator: std.mem.Allocator, comptime T: type, builder: *std.ArrayList(T), note: *std.ArrayList(T)) !void {
+    if (builder.items.len > 0) {
+        const joined_string = try utils.string_join(builder.*, " ", allocator);
+        try note.append(joined_string);
+        builder.items.len = 0;
+    }
+}
+
 //NOTE: Setting Reminders should be of format
 // `OkBob remind Buy Milk`
 // Where the reminder text is "Buy Milk"
@@ -38,15 +46,12 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
 
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "!")) {
-            const joined_string = try utils.string_join(note_builder, " ", allocator);
-            try notes.append(joined_string);
-            note_builder.items.len = 0;
+            try note_insert_from_builder(allocator, []const u8, &note_builder, &notes);
             continue;
         }
         try note_builder.append(arg);
     }
-    const joined_string = try utils.string_join(note_builder, " ", allocator);
-    try notes.append(joined_string);
+    try note_insert_from_builder(allocator, []const u8, &note_builder, &notes);
     for (notes.items) |note| {
         try insert(note);
     }
