@@ -45,6 +45,7 @@ pub fn main() !void {
             std.debug.print("{s} {s} is not a valid subcommand", .{ subcommand, subcommand_lower });
         }
     } else {
-        std.debug.print("No Subcommand", .{});
+        try modules.reminders.get(allocator);
+        //std.debug.print("No Subcommand", .{});
     }
 }

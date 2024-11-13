@@ -2,6 +2,16 @@ const std = @import("std");
 const utils = @import("../utils.zig");
 const db = @import("db.zig");
 
+const REMINDER = struct {
+    id: usize,
+    name: []const u8,
+    timeCreated: i64,
+
+    fn print(self: *const REMINDER) void {
+        std.log.debug("Reminder {d}:\n\t{s}\n\t {d}\n", .{ self.id, self.name, self.timeCreated });
+    }
+};
+
 fn insert(text: []const u8) !void {
     var stmt = try db.db.prepare("INSERT INTO reminders(isActive, name, timeCreated) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64})");
     defer stmt.deinit();
@@ -11,6 +21,17 @@ fn insert(text: []const u8) !void {
         .name = text,
         .timeCreated = std.time.timestamp(),
     });
+}
+
+fn fetch(allocator: std.mem.Allocator) !void {
+    var stmt = try db.db.prepare("SELECT id, name, timeCreated FROM reminders where isActive = 1");
+    defer stmt.deinit();
+
+    var iter = try stmt.iterator(REMINDER, .{});
+    while (try iter.nextAlloc(allocator, .{})) |vals| {
+        REMINDER.print(&vals);
+        //std.log.debug("{}\n", .{vals});
+    }
 }
 
 fn note_insert_from_builder(allocator: std.mem.Allocator, comptime T: type, builder: *std.ArrayList(T), note: *std.ArrayList(T)) !void {
@@ -56,4 +77,8 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
         try insert(note);
     }
     std.debug.print("In Reminders {s}\n", .{notes.items});
+}
+
+pub fn get(allocator: std.mem.Allocator) !void {
+    try fetch(allocator);
 }
