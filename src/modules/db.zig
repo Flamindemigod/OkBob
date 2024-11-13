@@ -33,7 +33,26 @@ pub fn init(allocator: std.mem.Allocator) !void {
             .write = true,
             .create = true,
         },
-        .threading_mode = .Serialized,
+    });
+
+    if (!db_exists) {
+        try setup();
+    }
+}
+
+fn setup() !void {
+    try db.exec("CREATE TABLE reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, isActive BOOLEAN, name TEXT, timeCreated INTEGER)", .{}, .{});
+    try db.exec("CREATE TABLE notifications (id INT, isActive BOOLEAN, name TEXT, timeCreated INTEGER, frequency INT)", .{}, .{});
+}
+
+pub fn insertReminder(text: []const u8) !void {
+    var stmt = try db.prepare("INSERT INTO reminders(isActive, name, timeCreated) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64})");
+    defer stmt.deinit();
+
+    try stmt.exec(.{}, .{
+        .isActive = @as(bool, true),
+        .name = text,
+        .timeCreated = std.time.timestamp(),
     });
 }
 

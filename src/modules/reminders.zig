@@ -1,5 +1,6 @@
 const std = @import("std");
 const utils = @import("../utils.zig");
+const db = @import("db.zig");
 
 //NOTE: Setting Reminders should be of format
 // `OkBob remind Buy Milk`
@@ -35,5 +36,8 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     }
     const joined_string = try utils.string_join(note_builder, " ", allocator);
     try notes.append(joined_string);
+    for (notes.items) |note| {
+        try db.insertReminder(note);
+    }
     std.debug.print("In Reminders {s}\n", .{notes.items});
 }
