@@ -7,6 +7,15 @@ const REMINDER = struct {
     name: []const u8,
     timeCreated: i64,
 
+    fn dismiss(self: *REMINDER) !void {
+        var stmt = try db.db.prepare("UPDATE reminders SET isActive = 0 WHERE id = $id{usize}");
+        defer stmt.deinit();
+
+        try stmt.exec(.{}, .{
+            .id = self.id,
+        });
+    }
+
     fn print(self: *const REMINDER, allocator: std.mem.Allocator, display_idx: usize) !void {
         std.log.info("Reminder {d}:\n\t{s}\n\t {s}\n", .{ display_idx, self.name, try utils.parse_timestamp(allocator, self.timeCreated) });
     }
@@ -77,12 +86,46 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     for (notes.items) |note| {
         try insert(note);
     }
-    std.debug.print("In Reminders {s}\n", .{notes.items});
 }
 
 pub fn get(allocator: std.mem.Allocator) !void {
     const note_list = try fetch(allocator);
     for (note_list.items, 0..) |note, display_idx| {
-        note.print(display_idx);
+        note.print(allocator, display_idx);
+    }
+}
+
+//NOTE: Dismissing Reminders should be of format
+// `OkBob -remind {idx}`
+// Where the idx is the display index that gets listed by the normal
+//Though that gets fairly inconvient when
+//needing to dismiss multiple reminders at once.
+//So to dismiss reminders we can use
+//`OkBob -remind 0 ! 2 ! 5`
+//While we could just split them by spaces as indexes would never have spaces within them.
+//I prefer having it split by ! for consistency with other interfaces
+//So i'll also support just spliting by spaces as well
+//`OkBob -remind 0 ! 2 5`
+//So that would dismiss reminders 0, 2, 5
+pub fn dismiss(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
+    const note_list = try fetch(allocator);
+    var dismissQueue = std.ArrayList(usize).init(allocator);
+    defer dismissQueue.deinit();
+    while (args.next()) |arg| {
+        if (std.mem.eql(u8, arg, "!")) {
+            continue;
+        }
+        const parsedIdx = try std.fmt.parseInt(usize, arg, 0);
+
+        if (parsedIdx < note_list.items.len) {
+            try dismissQueue.append(parsedIdx);
+        } else {
+            std.log.err("{d} is within the index bounds of the active reminders\n", .{parsedIdx});
+        }
+    }
+    std.log.info("Removing the following reminders", .{});
+    for (dismissQueue.items) |idx| {
+        note_list.items[idx].print(allocator, idx);
+        try note_list.items[idx].dismiss();
     }
 }

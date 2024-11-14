@@ -31,9 +31,7 @@ pub fn main() !void {
         if (subcommand_map.get(subcommand_lower)) |SC| {
             switch (SC) {
                 SubCommands.Reminder => try modules.reminders.set(&args, allocator),
-                SubCommands.DismissReminder => {
-                    std.debug.print("Dismissing Remind", .{});
-                },
+                SubCommands.DismissReminder => try modules.reminders.dismiss(&args, allocator),
                 SubCommands.Notification => {
                     std.debug.print("Notify is not implemented", .{});
                 },
