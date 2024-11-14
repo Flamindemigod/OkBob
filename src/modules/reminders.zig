@@ -7,8 +7,8 @@ const REMINDER = struct {
     name: []const u8,
     timeCreated: i64,
 
-    fn print(self: *const REMINDER, display_idx: usize) void {
-        std.log.debug("Reminder {d}:\n\t{s}\n\t {d}\n", .{ display_idx, self.name, self.timeCreated });
+    fn print(self: *const REMINDER, allocator: std.mem.Allocator, display_idx: usize) !void {
+        std.log.info("Reminder {d}:\n\t{s}\n\t {s}\n", .{ display_idx, self.name, try utils.parse_timestamp(allocator, self.timeCreated) });
     }
 };
 
