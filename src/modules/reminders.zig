@@ -16,8 +16,8 @@ const REMINDER = struct {
         });
     }
 
-    fn print(self: *const REMINDER, allocator: std.mem.Allocator, display_idx: usize) !void {
-        std.log.info("Reminder {d}:\n\t{s}\n\t {s}\n", .{ display_idx, self.name, try utils.parse_timestamp(allocator, self.timeCreated) });
+    fn print(self: *const REMINDER, allocator: std.mem.Allocator, display_idx: usize) void {
+        std.log.info("Reminder {d}:\n\t{s}\n\t{s}\n", .{ display_idx, self.name, utils.parse_timestamp(allocator, self.timeCreated) catch "Could not parse Timestamp" });
     }
 };
 
