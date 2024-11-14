@@ -6,7 +6,8 @@ pkgs.mkShell {
 	zig
 	valgrind
 	sqlite
-];
+	zls
+  ];
 
   # Optionally, you can set environment variables
   shellHook = ''
