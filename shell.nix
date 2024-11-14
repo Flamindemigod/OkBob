@@ -11,6 +11,7 @@ pkgs.mkShell {
 
   # Optionally, you can set environment variables
   shellHook = ''
+	export HOME=.
 	zig zen
 '';
 }
