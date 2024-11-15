@@ -9,6 +9,10 @@ pub fn build(b: *std.Build) !void {
         .optimize = opt,
     });
 
+    const zdt = b.dependency("zdt", .{
+        .target = target,
+        .optimize = opt,
+    });
     const exe = b.addExecutable(.{
         .name = "OkBob",
         .root_source_file = b.path("src/main.zig"),
@@ -18,6 +22,7 @@ pub fn build(b: *std.Build) !void {
     exe.linkLibC();
     exe.linkSystemLibrary("sqlite3");
     exe.root_module.addImport("sqlite", sqlite.module("sqlite"));
+    exe.root_module.addImport("zdt", zdt.module("zdt"));
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

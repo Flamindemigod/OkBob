@@ -1,5 +1,5 @@
 const std = @import("std");
-
+const zdt = @import("zdt");
 pub fn to_lowercase(input: []const u8, allocator: std.mem.Allocator) ![]u8 {
     var result: []u8 = try allocator.alloc(u8, input.len);
 
@@ -36,81 +36,16 @@ pub fn string_join(input: std.ArrayList([]const u8), sep: []const u8, allocator:
     }
     return result;
 }
-const DATETIME = struct {
-    day: u8 = 1,
-    month: u8 = 1,
-    year: u16 = 1970,
 
-    hours: u8 = 0,
-    mins: u8 = 0,
-
-    fn format(self: *DATETIME, allocator: std.mem.Allocator) ![]const u8 {
-        return try std.fmt.allocPrint(allocator, "{d}/{d}/{d} {d}:{d}", .{ self.day, self.month, self.year, self.hours, self.mins });
-    }
-};
-
-// Returns the number of days in a month for a given year and month (1-based)
-fn days_in_month(year: u16, month: u8) u8 {
-    switch (month) {
-        1, 3, 5, 7, 8, 10, 12 => return 31,
-        4, 6, 9, 11 => return 30,
-        2 => {
-            // Check for leap year
-            if ((year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)) {
-                return 29;
-            }
-            return 28;
-        },
-        else => return 0, // Invalid month
-    }
-}
-const SECONDS_IN_A_DAY: i64 = 86400; // 60 * 60 * 24
-//
 pub fn parse_timestamp(allocator: std.mem.Allocator, timestamp: i64) ![]const u8 {
-    var ts: i64 = timestamp;
-    var datetime: DATETIME = DATETIME{};
+    var formatted = std.ArrayList(u8).init(allocator);
+    defer formatted.deinit();
 
-    var current_year = datetime.year;
-    while (ts >= SECONDS_IN_A_DAY * 365) {
-        const days_in_year: u16 = if ((current_year % 4 == 0 and current_year % 100 != 0) or (current_year % 400 == 0)) 366 else 365;
-        if (ts >= SECONDS_IN_A_DAY * days_in_year) {
-            ts -= SECONDS_IN_A_DAY * days_in_year;
-            current_year += 1;
-        } else {
-            break;
-        }
-    }
-    datetime.year = current_year;
+    var local_zone = try zdt.Timezone.tzLocal(allocator);
+    defer local_zone.deinit();
 
-    // Loop over months in the current year
-    var current_month: u8 = 1;
-    while (ts >= SECONDS_IN_A_DAY * days_in_month(datetime.year, current_month)) {
-        const days_in_current_month = days_in_month(datetime.year, current_month);
-        if (ts >= SECONDS_IN_A_DAY * days_in_current_month) {
-            ts -= SECONDS_IN_A_DAY * days_in_current_month;
-            current_month += 1;
-        } else {
-            break;
-        }
-    }
-    datetime.month = current_month;
+    const now = try zdt.Datetime.fromUnix(timestamp, zdt.Duration.Resolution.second, .{ .tz = &local_zone });
 
-    // Now, calculate the day
-    while (ts >= SECONDS_IN_A_DAY) {
-        ts -= SECONDS_IN_A_DAY;
-        datetime.day += 1;
-    }
-
-    // Calculate hours, minutes, and seconds from the remaining seconds
-    // Now, calculate the day
-    while (ts >= 3600) {
-        ts -= 3600;
-        datetime.hours += 1;
-    }
-
-    while (ts >= 60) {
-        ts -= 60;
-        datetime.mins += 1;
-    }
-    return try datetime.format(allocator);
+    try now.toString("%a %b %d %I:%M:%S %p %Z %Y", formatted.writer());
+    return formatted.toOwnedSlice();
 }
