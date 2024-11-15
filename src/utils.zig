@@ -37,6 +37,42 @@ pub fn string_join(input: std.ArrayList([]const u8), sep: []const u8, allocator:
     return result;
 }
 
+const directives = [_][]const u8{ "%d/%m", "%H:%M", "%d/%m/%y", "%d/%m %H:%M", "%d/%m/%y %H:%M" };
+
+pub fn parse_to_timestamp(allocator: std.mem.Allocator, string: []const u8) !i64 {
+    var local_zone = try zdt.Timezone.tzLocal(allocator);
+    defer local_zone.deinit();
+
+    var dt: zdt.Datetime = undefined;
+    for (directives) |directive| {
+        dt = zdt.Datetime.fromString(string, directive) catch continue;
+        break;
+    }
+    var d = zdt.Datetime.nowUTC().toFields();
+
+    d.second = 0;
+    d.nanosecond = 0;
+    d.hour = 0;
+    d.minute = 0;
+
+    const f = zdt.Datetime.Fields{};
+
+    var fields = dt.toFields();
+    fields = .{
+        .year = if (fields.year == f.year) d.year else fields.year,
+        .month = if (fields.month == f.month) d.month else fields.month,
+        .day = if (fields.day == f.day) d.day else fields.day,
+        .hour = if (fields.hour == f.hour) d.hour else fields.hour,
+        .minute = if (fields.minute == f.minute) d.minute else fields.minute,
+        .second = if (fields.second == f.second) d.second else fields.second,
+        .nanosecond = if (fields.nanosecond == f.nanosecond) d.nanosecond else fields.nanosecond,
+    };
+    dt = try zdt.Datetime.fromFields(fields);
+
+    dt = try dt.tzLocalize(.{ .tz = &local_zone });
+    return @intCast(dt.toUnix(zdt.Duration.Resolution.second));
+}
+
 pub fn parse_timestamp(allocator: std.mem.Allocator, timestamp: i64) ![]const u8 {
     var formatted = std.ArrayList(u8).init(allocator);
     defer formatted.deinit();
@@ -45,7 +81,6 @@ pub fn parse_timestamp(allocator: std.mem.Allocator, timestamp: i64) ![]const u8
     defer local_zone.deinit();
 
     const now = try zdt.Datetime.fromUnix(timestamp, zdt.Duration.Resolution.second, .{ .tz = &local_zone });
-
-    try now.toString("%a %b %d %I:%M:%S %p %Z %Y", formatted.writer());
+    try now.toString("%a %b %d %Y %H:%M", formatted.writer());
     return formatted.toOwnedSlice();
 }
