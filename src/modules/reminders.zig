@@ -115,12 +115,36 @@ pub fn dismiss(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !vo
         if (std.mem.eql(u8, arg, "!")) {
             continue;
         }
-        const parsedIdx = try std.fmt.parseInt(usize, arg, 0);
+        var parsedIdx = std.ArrayListUnmanaged(usize){};
 
-        if (parsedIdx < note_list.items.len) {
-            try dismissQueue.append(parsedIdx);
+        try parsedIdx.append(allocator, std.fmt.parseInt(usize, arg, 0) catch |err| blk: {
+            switch (err) {
+                std.fmt.ParseIntError.InvalidCharacter => {
+                    var start: usize = undefined;
+                    var end: usize = undefined;
+                    if (std.mem.indexOf(u8, arg, "..")) |point| {
+                        start = try std.fmt.parseInt(usize, arg[0..point], 0);
+                        end = if (point + 2 >= arg.len) note_list.items.len - 1 else (try std.fmt.parseInt(u8, arg[point + 2 ..], 0));
+                    } else if (std.mem.indexOf(u8, arg, ":")) |point| {
+                        start = try std.fmt.parseInt(usize, arg[0..point], 0);
+                        end = if (point + 1 >= arg.len) note_list.items.len - 1 else (start + try std.fmt.parseInt(u8, arg[point + 1 ..], 0) - 1);
+                    } else {
+                        @panic("Not Valid Seperators");
+                    }
+                    for (start..end) |val| {
+                        try parsedIdx.append(allocator, val);
+                    }
+                    break :blk end;
+                },
+                else => unreachable,
+            }
+        });
+
+        if (std.mem.max(usize, parsedIdx.items) < note_list.items.len) {
+            try dismissQueue.appendSlice(parsedIdx.items);
+            parsedIdx.deinit(allocator);
         } else {
-            std.log.err("{d} is within the index bounds of the active reminders\n", .{parsedIdx});
+            std.log.err("{any} is not within the index bounds of the active reminders\n", .{parsedIdx.items});
         }
     }
     std.log.info("Removing the following reminders", .{});
