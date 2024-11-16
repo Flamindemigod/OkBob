@@ -5,7 +5,6 @@ pub var db: sqlite.Db = undefined;
 
 pub fn init(allocator: std.mem.Allocator) !void {
     var db_path: [:0]const u8 = "./OkBob.db";
-    var db_exists: bool = true;
     {
         var sb = std.ArrayList(u8).init(allocator);
         defer sb.deinit();
@@ -19,11 +18,6 @@ pub fn init(allocator: std.mem.Allocator) !void {
         _ = std.fs.cwd().makeDir(sb.items) catch null;
         try sb.appendSlice("/OkBob.db");
 
-        _ = std.fs.cwd().statFile(sb.items) catch {
-            std.debug.print("First Time\n", .{});
-            db_exists = false;
-        };
-
         db_path = try sb.toOwnedSliceSentinel(0);
     }
 
@@ -34,15 +28,12 @@ pub fn init(allocator: std.mem.Allocator) !void {
             .create = true,
         },
     });
-
-    if (!db_exists) {
-        try setup();
-    }
+    try setup();
 }
 
 fn setup() !void {
-    try db.exec("CREATE TABLE reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, isActive BOOLEAN, name TEXT, timeCreated INTEGER)", .{}, .{});
-    try db.exec("CREATE TABLE notifications (id INT, isActive BOOLEAN, name TEXT, timeCreated INTEGER, frequency INT)", .{}, .{});
+    try db.exec("CREATE TABLE IF NOT EXISTS reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, isActive BOOLEAN, name TEXT, timeCreated INTEGER)", .{}, .{});
+    try db.exec("CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, isActive BOOLEAN, name TEXT, timeCreated INTEGER, timeNext INTEGER, timeInterval TEXT)", .{}, .{});
 }
 
 pub fn close() void {

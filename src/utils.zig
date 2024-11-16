@@ -84,3 +84,42 @@ pub fn parse_timestamp(allocator: std.mem.Allocator, timestamp: i64) ![]const u8
     try now.toString("%a %b %d %Y %H:%M", formatted.writer());
     return formatted.toOwnedSlice();
 }
+
+pub fn parse_durations(str: []const u8) !zdt.Duration.RelativeDelta {
+    var delta = zdt.Duration.RelativeDelta{};
+    var cursor: usize = 0;
+    for (str, 0..) |char, idx| {
+        switch (char) {
+            'Y' => {
+                delta.years = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            'M' => {
+                delta.months = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            'D' => {
+                delta.days = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            'W' => {
+                delta.weeks = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            'h' => {
+                delta.hours = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            'm' => {
+                delta.minutes = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            's' => {
+                delta.seconds = try std.fmt.parseInt(u32, str[cursor..idx], 0);
+                cursor = idx + 1;
+            },
+            else => {},
+        }
+    }
+    return delta;
+}

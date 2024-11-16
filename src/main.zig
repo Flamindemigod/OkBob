@@ -32,12 +32,8 @@ pub fn main() !void {
             switch (SC) {
                 SubCommands.Reminder => try modules.reminders.set(&args, allocator),
                 SubCommands.DismissReminder => try modules.reminders.dismiss(&args, allocator),
-                SubCommands.Notification => {
-                    std.debug.print("Notify is not implemented", .{});
-                },
-                SubCommands.DismissNotification => {
-                    std.debug.print("Dismissing Nofify is not implemented", .{});
-                },
+                SubCommands.Notification => try modules.notifications.set(&args, allocator),
+                SubCommands.DismissNotification => try modules.notifications.dismiss(&args, allocator),
             }
         } else {
             std.debug.print("{s} {s} is not a valid subcommand", .{ subcommand, subcommand_lower });
