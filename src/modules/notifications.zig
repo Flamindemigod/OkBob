@@ -73,6 +73,8 @@ fn note_insert_from_builder(allocator: std.mem.Allocator, builder: *std.ArrayLis
 // and using -notify will remove the notification
 // and it will not generate any subsequent reminders
 // You can still chain notifications using ! as a seperator
+
+//NOTE: If you dont add any more arguments. It will display what notifications are currently active
 pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     var note_builder = std.ArrayList([]const u8).init(allocator);
     defer note_builder.deinit();
@@ -98,6 +100,12 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, &interval, intervalString);
     for (notes.items) |note| {
         try note.insert();
+    }
+    if (notes.items.len == 0) {
+        const n = try fetch(allocator);
+        for (n.items, 0..) |notif, idx| {
+            notif.print(allocator, idx);
+        }
     }
 }
 
