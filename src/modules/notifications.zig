@@ -2,6 +2,7 @@ const std = @import("std");
 const utils = @import("../utils.zig");
 const db = @import("db.zig");
 const zdt = @import("zdt");
+const REMINDER = @import("reminders.zig").REMINDER;
 
 const NOTIFICATION = struct {
     id: usize,
@@ -9,6 +10,24 @@ const NOTIFICATION = struct {
     timeCreated: i64,
     timeNext: i64,
     timeInterval: []const u8,
+
+    fn generateReminder(self: *const NOTIFICATION) !void {
+        const reminder = REMINDER{
+            .id = 0,
+            .name = self.name,
+            .timeCreated = self.timeNext,
+        };
+        try reminder.insert();
+        var timeNext = try zdt.Datetime.fromUnix(self.timeNext, .second, null);
+        timeNext = try timeNext.addRelative(try utils.parse_durations(self.timeInterval));
+        var stmt = try db.db.prepare("UPDATE notifications SET timeNext = $timeNext{i64} WHERE id = $id{usize}");
+        defer stmt.deinit();
+
+        try stmt.exec(.{}, .{
+            .timeNext = @as(i64, @intCast(timeNext.toUnix(.second))),
+            .id = self.id,
+        });
+    }
 
     fn insert(self: *const NOTIFICATION) !void {
         var stmt = try db.db.prepare("INSERT INTO notifications(isActive, name, timeCreated, timeNext, timeInterval) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64}, $timeNext{i64}, $timeInterval{[]const u8})");
@@ -36,6 +55,17 @@ const NOTIFICATION = struct {
     }
 };
 
+pub fn fetchValid(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(NOTIFICATION) {
+    var note_list = std.ArrayListUnmanaged(NOTIFICATION){};
+    var stmt = try db.db.prepare("SELECT id, name, timeCreated, timeNext, timeInterval FROM notifications where isActive = 1 and timeNext <= $currentTime{i64}");
+    defer stmt.deinit();
+
+    var iter = try stmt.iterator(NOTIFICATION, .{ .currentTime = std.time.timestamp() });
+    while (try iter.nextAlloc(allocator, .{})) |vals| {
+        try note_list.append(allocator, @as(NOTIFICATION, vals));
+    }
+    return note_list;
+}
 fn fetch(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(NOTIFICATION) {
     var note_list = std.ArrayListUnmanaged(NOTIFICATION){};
     var stmt = try db.db.prepare("SELECT id, name, timeCreated, timeNext, timeInterval FROM notifications where isActive = 1");
@@ -48,7 +78,6 @@ fn fetch(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(NOTIFICATION) {
     return note_list;
 }
 
-//TODO: Might be worth moving this and its sister function in reminders to utils
 fn note_insert_from_builder(allocator: std.mem.Allocator, builder: *std.ArrayList([]const u8), note: *std.ArrayList(NOTIFICATION), timeStart: *i64, interval: *zdt.Duration.RelativeDelta, intervalString: []const u8) !void {
     if (builder.items.len > 0) {
         const timeStartDateTime = try zdt.Datetime.fromUnix(@intCast(timeStart.*), .second, null);
@@ -87,10 +116,10 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
         if (std.mem.eql(u8, arg, "!")) {
             try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, &interval, intervalString);
             continue;
-        } else if (std.mem.eql(u8, arg[0..3], "-t=")) {
+        } else if (arg.len > 3 and std.mem.eql(u8, arg[0..3], "-t=")) {
             timeStart = try utils.parse_to_timestamp(allocator, arg[3..]);
             continue;
-        } else if (std.mem.eql(u8, arg[0..3], "-i=")) {
+        } else if (arg.len > 3 and std.mem.eql(u8, arg[0..3], "-i=")) {
             intervalString = arg[3..];
             interval = try utils.parse_durations(arg[3..]);
             continue;
@@ -165,5 +194,13 @@ pub fn dismiss(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !vo
     for (dismissQueue.items) |idx| {
         note_list.items[idx].print(allocator, idx);
         try note_list.items[idx].dismiss();
+    }
+}
+
+pub fn generateRemindersFromNotifs(allocator: std.mem.Allocator) !void {
+    var notifications = try fetchValid(allocator);
+    defer notifications.deinit(allocator);
+    for (notifications.items) |notif| {
+        try notif.generateReminder();
     }
 }

@@ -2,11 +2,21 @@ const std = @import("std");
 const utils = @import("../utils.zig");
 const db = @import("db.zig");
 
-const REMINDER = struct {
+pub const REMINDER = struct {
     id: usize,
     name: []const u8,
     timeCreated: i64,
 
+    pub fn insert(self: *const REMINDER) !void {
+        var stmt = try db.db.prepare("INSERT INTO reminders(isActive, name, timeCreated) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64})");
+        defer stmt.deinit();
+
+        try stmt.exec(.{}, .{
+            .isActive = @as(bool, true),
+            .name = self.name,
+            .timeCreated = self.timeCreated,
+        });
+    }
     fn dismiss(self: *REMINDER) !void {
         var stmt = try db.db.prepare("UPDATE reminders SET isActive = 0 WHERE id = $id{usize}");
         defer stmt.deinit();
@@ -21,17 +31,6 @@ const REMINDER = struct {
     }
 };
 
-fn insert(text: []const u8) !void {
-    var stmt = try db.db.prepare("INSERT INTO reminders(isActive, name, timeCreated) VALUES($isActive{bool}, $name{[]const u8}, $timeCreated{i64})");
-    defer stmt.deinit();
-
-    try stmt.exec(.{}, .{
-        .isActive = @as(bool, true),
-        .name = text,
-        .timeCreated = std.time.timestamp(),
-    });
-}
-
 fn fetch(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(REMINDER) {
     var note_list = std.ArrayListUnmanaged(REMINDER){};
     var stmt = try db.db.prepare("SELECT id, name, timeCreated FROM reminders where isActive = 1");
@@ -44,10 +43,10 @@ fn fetch(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(REMINDER) {
     return note_list;
 }
 
-fn note_insert_from_builder(allocator: std.mem.Allocator, comptime T: type, builder: *std.ArrayList(T), note: *std.ArrayList(T)) !void {
+fn note_insert_from_builder(allocator: std.mem.Allocator, builder: *std.ArrayList([]const u8), note: *std.ArrayList(REMINDER)) !void {
     if (builder.items.len > 0) {
         const joined_string = try utils.string_join(builder.*, " ", allocator);
-        try note.append(joined_string);
+        try note.append(REMINDER{ .name = joined_string, .timeCreated = std.time.timestamp(), .id = 0 });
         builder.items.len = 0;
     }
 }
@@ -72,19 +71,19 @@ fn note_insert_from_builder(allocator: std.mem.Allocator, comptime T: type, buil
 pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     var note_builder = std.ArrayList([]const u8).init(allocator);
     defer note_builder.deinit();
-    var notes = std.ArrayList([]const u8).init(allocator);
+    var notes = std.ArrayList(REMINDER).init(allocator);
     defer notes.deinit();
 
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "!")) {
-            try note_insert_from_builder(allocator, []const u8, &note_builder, &notes);
+            try note_insert_from_builder(allocator, &note_builder, &notes);
             continue;
         }
         try note_builder.append(arg);
     }
-    try note_insert_from_builder(allocator, []const u8, &note_builder, &notes);
+    try note_insert_from_builder(allocator, &note_builder, &notes);
     for (notes.items) |note| {
-        try insert(note);
+        try note.insert();
     }
 }
 
