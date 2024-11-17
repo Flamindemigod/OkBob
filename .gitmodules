@@ -1,0 +1,6 @@
+[submodule "external/zig-sqlite"]
+	path = external/zig-sqlite
+	url = git@github.com:vrischmann/zig-sqlite.git
+[submodule "external/zdt"]
+	path = external/zdt
+	url = git@github.com:FObersteiner/zdt.git
