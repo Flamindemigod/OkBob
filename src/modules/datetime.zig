@@ -44,11 +44,7 @@ const parserDirectives = [_]PARSER{
     }.call },
     PARSER{ .directive = "%d/%m/%y %H:%M", .postProcess = struct {
         pub fn call(dt: zdt.Datetime) !zdt.Datetime {
-            const temp = try zdt.Datetime.now(if (dt.tz) |tz| .{ .tz = tz } else null);
-            const ddt = temp.toFields();
-            var dtf = dt.toFields();
-            dtf.year = ddt.year;
-            return try zdt.Datetime.fromFields(dtf);
+            return dt;
         }
     }.call },
 };
