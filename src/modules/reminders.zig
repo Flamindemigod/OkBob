@@ -1,5 +1,6 @@
 const std = @import("std");
 const utils = @import("../utils.zig");
+const dt = @import("datetime.zig");
 const db = @import("db.zig");
 
 pub const REMINDER = struct {
@@ -27,7 +28,7 @@ pub const REMINDER = struct {
     }
 
     fn print(self: *const REMINDER, allocator: std.mem.Allocator, display_idx: usize) void {
-        std.log.info("Reminder {d}:\n\t{s}\n\t{s}\n", .{ display_idx, self.name, utils.parse_timestamp(allocator, self.timeCreated) catch "Could not parse Timestamp" });
+        std.log.info("Reminder {d}:\n\t{s}\n\t{s}\n", .{ display_idx, self.name, dt.parse_timestamp(allocator, self.timeCreated) catch "Could not parse Timestamp" });
     }
 };
 

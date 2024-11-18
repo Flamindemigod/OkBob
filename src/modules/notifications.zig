@@ -1,5 +1,6 @@
 const std = @import("std");
 const utils = @import("../utils.zig");
+const dt = @import("datetime.zig");
 const db = @import("db.zig");
 const zdt = @import("zdt");
 const REMINDER = @import("reminders.zig").REMINDER;
@@ -19,7 +20,7 @@ const NOTIFICATION = struct {
         };
         try reminder.insert();
         var timeNext = try zdt.Datetime.fromUnix(self.timeNext, .second, null);
-        timeNext = try timeNext.addRelative(try utils.parse_durations(self.timeInterval));
+        timeNext = try timeNext.addRelative(try dt.parse_durations(self.timeInterval));
         var stmt = try db.db.prepare("UPDATE notifications SET timeNext = $timeNext{i64} WHERE id = $id{usize}");
         defer stmt.deinit();
 
@@ -51,7 +52,7 @@ const NOTIFICATION = struct {
     }
 
     fn print(self: *const NOTIFICATION, allocator: std.mem.Allocator, display_idx: usize) void {
-        std.log.info("Notification {d}:\n\t{s}\n\t{s}\n\tEvery: {s}\n", .{ display_idx, self.name, utils.parse_timestamp(allocator, self.timeNext) catch "Could not parse Timestamp", self.timeInterval });
+        std.log.info("Notification {d}:\n\t{s}\n\t{s}\n\tEvery: {s}\n", .{ display_idx, self.name, dt.parse_timestamp(allocator, self.timeNext) catch "Could not parse Timestamp", self.timeInterval });
     }
 };
 
@@ -117,11 +118,11 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
             try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, &interval, intervalString);
             continue;
         } else if (arg.len > 3 and std.mem.eql(u8, arg[0..3], "-t=")) {
-            timeStart = try utils.parse_to_timestamp(allocator, arg[3..]);
+            timeStart = try dt.parse_to_timestamp(allocator, arg[3..]);
             continue;
         } else if (arg.len > 3 and std.mem.eql(u8, arg[0..3], "-i=")) {
             intervalString = arg[3..];
-            interval = try utils.parse_durations(arg[3..]);
+            interval = try dt.parse_durations(arg[3..]);
             continue;
         }
         try note_builder.append(arg);
