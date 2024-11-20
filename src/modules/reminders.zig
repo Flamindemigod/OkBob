@@ -179,3 +179,39 @@ pub fn dismiss(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !vo
         try note_list.items[idx].dismiss();
     }
 }
+
+pub fn printHelpText() !void {
+    const writer = std.io.getStdErr().writer();
+    try writer.print("OkBob Reminder Subcommand Usage\n", .{});
+    try writer.print("\tOkBob remind\n", .{});
+    try writer.print("\tOkBob remind [..reminder_name] ! ...\n", .{});
+    try writer.print("\tOkBob -remind [id] ...\n", .{});
+    try writer.print("\n", .{});
+    try writer.print("Ids:\n", .{});
+    try writer.print("\tIds are basically the indexes of the active reminders\n", .{});
+    try writer.print("\tYou can see them when you use\n", .{});
+    try writer.print("\t\tOkBob remind\n", .{});
+    try writer.print("\tWithout any additional parameters\n", .{});
+    try writer.print("\tIds are kinda interesting in that they can be a single number or a slice\n", .{});
+    try writer.print("\tSo you can represent them as\n", .{});
+    try writer.print("\t\t1 2 3 4\n", .{});
+    try writer.print("\t\t1..4\n", .{});
+    try writer.print("\t\t1:3\n", .{});
+    try writer.print("\tAll the 3 above id representations are equivalent\n", .{});
+    try writer.print("\tThe way the slices are defined are\n", .{});
+    try writer.print("\t\tstart..end\n", .{});
+    try writer.print("\t\tstart:len\n", .{});
+    try writer.print("\tYou can also not specify the len and end for the slices and it will default the end of the reminders\n", .{});
+    try writer.print("\n", .{});
+    try writer.print("Examples\n", .{});
+    try writer.print("\tA basic example\n", .{});
+    try writer.print("\t\tOkBob remind Clean Room\n", .{});
+    try writer.print("\tIf you want to see all the active reminders\n", .{});
+    try writer.print("\t\tOkBob remind\n", .{});
+    try writer.print("\tIf you want to remove a reminders\n", .{});
+    try writer.print("\tOkBob -remind [id]\n", .{});
+    try writer.print("\tWhere the id is the index of the reminder\n", .{});
+    try writer.print("\tYou can also dismiss multiple items with\n", .{});
+    try writer.print("\t\tOkBob -reminder [id1] [id2] ! [id3]\n", .{});
+    try writer.print("\n", .{});
+}

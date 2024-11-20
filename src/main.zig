@@ -7,6 +7,7 @@ const SubCommands = enum {
     DismissReminder,
     Notification,
     DismissNotification,
+    Help,
 };
 
 pub var WINDOW: termSize.TermSize = undefined;
@@ -22,6 +23,7 @@ pub fn main() !void {
     defer modules.db.close();
     _ = args.next();
     var subcommand_map = std.StringHashMap(SubCommands).init(allocator);
+    try subcommand_map.put("help", SubCommands.Help);
     try subcommand_map.put("remind", SubCommands.Reminder);
     try subcommand_map.put("-remind", SubCommands.DismissReminder);
     try subcommand_map.put("notify", SubCommands.Notification);
@@ -36,9 +38,25 @@ pub fn main() !void {
                 SubCommands.DismissReminder => try modules.reminders.dismiss(&args, allocator),
                 SubCommands.Notification => try modules.notifications.set(&args, allocator),
                 SubCommands.DismissNotification => try modules.notifications.dismiss(&args, allocator),
+                SubCommands.Help => {
+                    try modules.reminders.printHelpText();
+                    try modules.notifications.printHelpText();
+                },
             }
         } else {
-            std.debug.print("{s} {s} is not a valid subcommand", .{ subcommand, subcommand_lower });
+            const writer = std.io.getStdErr().writer();
+            try writer.print("{s} is not a valid subcommand\n", .{subcommand});
+            try writer.print("The Valid Subcommands are\n", .{});
+            try writer.print("remind\n", .{});
+            try writer.print("\tSets a reminder\n", .{});
+            try writer.print("-remind\n", .{});
+            try writer.print("\tRemoves a reminder\n", .{});
+            try writer.print("notify\n", .{});
+            try writer.print("\tSets a Notification\n", .{});
+            try writer.print("-notify\n", .{});
+            try writer.print("\tRemoves a Notification\n", .{});
+            try writer.print("help\n", .{});
+            try writer.print("\tPrints Help for Reminder and Notification Subcommands\n", .{});
         }
     } else {
         try modules.notifications.generateRemindersFromNotifs(allocator);
