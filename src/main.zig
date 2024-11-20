@@ -1,6 +1,7 @@
 const std = @import("std");
 const utils = @import("utils.zig");
 const modules = @import("modules/mod.zig");
+const termSize = @import("termSize");
 const SubCommands = enum {
     Reminder,
     DismissReminder,
@@ -8,7 +9,9 @@ const SubCommands = enum {
     DismissNotification,
 };
 
+pub var WINDOW: termSize.TermSize = undefined;
 pub fn main() !void {
+    WINDOW = try termSize.termSize(std.io.getStdOut()) orelse termSize.TermSize{ .width = 160, .height = 90 };
     const page_allocator = std.heap.page_allocator;
     var Aallocator = std.heap.ArenaAllocator.init(page_allocator);
     defer Aallocator.deinit();
@@ -18,7 +21,6 @@ pub fn main() !void {
     try modules.db.init(allocator);
     defer modules.db.close();
     _ = args.next();
-
     var subcommand_map = std.StringHashMap(SubCommands).init(allocator);
     try subcommand_map.put("remind", SubCommands.Reminder);
     try subcommand_map.put("-remind", SubCommands.DismissReminder);

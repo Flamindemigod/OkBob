@@ -27,8 +27,34 @@ pub const REMINDER = struct {
         });
     }
 
+    fn format_name(self: *const REMINDER, allocator: std.mem.Allocator, leadingSpaces: []const u8) !std.ArrayList([]const u8) {
+        const WINDOW = @import("../main.zig").WINDOW;
+        const max_width = std.math.clamp(WINDOW.width, 5, 75);
+        var stringBuffer = std.ArrayList([]const u8).init(allocator);
+        var sb = std.ArrayList(u8).init(allocator);
+        defer sb.deinit();
+        var it = std.mem.splitScalar(u8, self.name, ' ');
+        while (it.next()) |x| {
+            if ((sb.items.len + x.len) >= max_width) {
+                try stringBuffer.append(try sb.toOwnedSlice());
+            }
+            if (sb.items.len == 0) try sb.appendSlice(leadingSpaces);
+            try sb.appendSlice(x);
+            try sb.append(' ');
+        }
+        if (sb.items.len >= 0) try stringBuffer.append(try sb.toOwnedSlice());
+        return stringBuffer;
+    }
+
     fn print(self: *const REMINDER, allocator: std.mem.Allocator, display_idx: usize) void {
-        std.log.info("Reminder {d}:\n\t{s}\n\t{s}\n", .{ display_idx, self.name, dt.parse_timestamp(allocator, self.timeCreated) catch "Could not parse Timestamp" });
+        const writer = std.io.getStdOut().writer();
+        const leadingSpaces = "    ";
+        writer.print("Reminder {d}\n", .{display_idx}) catch std.log.err("Failed to print to stdout", .{});
+        const formatted_strings = self.format_name(allocator, leadingSpaces) catch return;
+        for (formatted_strings.items) |str| {
+            writer.print("{s}\n", .{str}) catch std.log.err("Failed to print to stdout", .{});
+        }
+        writer.print("{s}\n\n", .{dt.parse_timestamp(allocator, self.timeCreated) catch "Could not parse Timestamp"}) catch std.log.err("Failed to print to stdout", .{});
     }
 };
 

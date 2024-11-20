@@ -4,3 +4,6 @@
 [submodule "external/zdt"]
 	path = external/zdt
 	url = git@github.com:FObersteiner/zdt.git
+[submodule "external/zig-termsize"]
+	path = external/zig-termsize
+	url = git@github.com:softprops/zig-termsize.git

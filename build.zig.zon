@@ -2,12 +2,9 @@
     .name = "OkBob",
     .version = "0.0.1",
     .dependencies = .{
-        .sqlite = .{
-        .path = "./external/zig-sqlite"
-    },
-        .zdt = .{
-        .path = "./external/zdt"
-        },
+        .sqlite = .{ .path = "./external/zig-sqlite" },
+        .zdt = .{ .path = "./external/zdt" },
+        .termSize = .{ .path = "./external/zig-termsize" },
     },
     .paths = .{"."},
 }
