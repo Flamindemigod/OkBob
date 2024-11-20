@@ -113,3 +113,14 @@ pub fn parse_durations(str: []const u8) !zdt.Duration.RelativeDelta {
     }
     return delta;
 }
+
+pub fn getTimeNext(dt: zdt.Datetime, intervalString: []const u8) !zdt.Datetime {
+    const currentTime = try zdt.Datetime.now(if (dt.tz) |tz| .{ .tz = tz } else null);
+    const relTime = try parse_durations(intervalString);
+    var timeNext: zdt.Datetime = dt;
+    while (true) {
+        timeNext = try timeNext.addRelative(relTime);
+        if (try timeNext.compareUT(currentTime) == .gt) break;
+    }
+    return timeNext;
+}

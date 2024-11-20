@@ -20,7 +20,7 @@ const NOTIFICATION = struct {
         };
         try reminder.insert();
         var timeNext = try zdt.Datetime.fromUnix(self.timeNext, .second, null);
-        timeNext = try timeNext.addRelative(try dt.parse_durations(self.timeInterval));
+        timeNext = try dt.getTimeNext(timeNext, self.timeInterval);
         var stmt = try db.db.prepare("UPDATE notifications SET timeNext = $timeNext{i64} WHERE id = $id{usize}");
         defer stmt.deinit();
 
@@ -79,10 +79,10 @@ fn fetch(allocator: std.mem.Allocator) !std.ArrayListUnmanaged(NOTIFICATION) {
     return note_list;
 }
 
-fn note_insert_from_builder(allocator: std.mem.Allocator, builder: *std.ArrayList([]const u8), note: *std.ArrayList(NOTIFICATION), timeStart: *i64, interval: *zdt.Duration.RelativeDelta, intervalString: []const u8) !void {
+fn note_insert_from_builder(allocator: std.mem.Allocator, builder: *std.ArrayList([]const u8), note: *std.ArrayList(NOTIFICATION), timeStart: *i64, intervalString: []const u8) !void {
     if (builder.items.len > 0) {
         const timeStartDateTime = try zdt.Datetime.fromUnix(@intCast(timeStart.*), .second, null);
-        const t = try timeStartDateTime.addRelative(interval.*);
+        const t = try dt.getTimeNext(timeStartDateTime, intervalString);
         const tNext: i64 = @intCast(t.toUnix(.second));
         const joined_string = try utils.string_join(builder.*, " ", allocator);
         try note.append(NOTIFICATION{ .id = 0, .name = joined_string, .timeCreated = timeStart.*, .timeNext = tNext, .timeInterval = intervalString });
@@ -110,24 +110,22 @@ pub fn set(args: *std.process.ArgIterator, allocator: std.mem.Allocator) !void {
     defer note_builder.deinit();
     var notes = std.ArrayList(NOTIFICATION).init(allocator);
     defer notes.deinit();
-    var interval = zdt.Duration.RelativeDelta{ .years = 1 };
     var intervalString: []const u8 = "1Y";
     var timeStart = std.time.timestamp();
     while (args.next()) |arg| {
         if (std.mem.eql(u8, arg, "!")) {
-            try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, &interval, intervalString);
+            try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, intervalString);
             continue;
         } else if (arg.len > 3 and std.mem.eql(u8, arg[0..3], "-t=")) {
             timeStart = try dt.parse_to_timestamp(allocator, arg[3..]);
             continue;
         } else if (arg.len > 3 and std.mem.eql(u8, arg[0..3], "-i=")) {
             intervalString = arg[3..];
-            interval = try dt.parse_durations(arg[3..]);
             continue;
         }
         try note_builder.append(arg);
     }
-    try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, &interval, intervalString);
+    try note_insert_from_builder(allocator, &note_builder, &notes, &timeStart, intervalString);
     for (notes.items) |note| {
         try note.insert();
     }
